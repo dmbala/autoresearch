@@ -1,0 +1,34 @@
+Bootstrap: docker
+From: nvidia/cuda:12.1.0-devel-ubuntu22.04
+
+%post
+    # Avoid interactive prompts
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        curl \
+        git \
+        python3 \
+        python3-pip \
+        build-essential \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install uv to a world-accessible location
+    curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=/usr/local/bin sh
+
+    # Clone the repo
+    git clone https://github.com/karpathy/autoresearch /opt/autoresearch
+
+    # Sync dependencies (installs flash-attention and all deps)
+    cd /opt/autoresearch
+    uv sync
+
+%environment
+    export PATH="/usr/local/bin:$PATH"
+    export VIRTUAL_ENV=/opt/autoresearch/.venv
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+
+%runscript
+    cd /opt/autoresearch
+    exec "$@"

@@ -8,6 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+.cache
 worktrees/
 results/
 queue/
@@ -21,3 +22,10 @@ dev/
 
 # Results file
 results.tsv
+
+# Training and SLURM logs
+run.log
+logs/
+
+# Singularity images
+*.sif

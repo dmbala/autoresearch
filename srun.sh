@@ -1,36 +1,40 @@
 #!/bin/bash
 # Usage: srun.sh [host_path] <command>
 #   host_path  Directory containing autoresearch.sif (default: current directory)
-#   command    Command to run inside /opt/autoresearch in the container
+#   command    Command to run inside /workspace in the container (uses container's Python venv)
 #
 # Examples:
-#   ./srun.sh uv run train.py
-#   ./srun.sh /scratch/mydir uv run train.py
+#   ./srun.sh python prepare.py
+#   ./srun.sh python train.py
+#   ./srun.sh /scratch/mydir python prepare.py
 
-HOST_PATH="$(pwd)"
+SIF="/n/netscratch/kempner_dev/Lab/bdesinghu/images/autoresearch.sif"
+REPO="${PWD}"
+CACHE_DATA="${PWD}/.cache"
 
 # If the first argument is an existing directory, treat it as the host path
 if [ -d "$1" ]; then
-    HOST_PATH="$1"
+    REPO="$1"
     shift
 fi
-
-SIF="${HOST_PATH}/autoresearch.sif"
 
 if [ ! -f "$SIF" ]; then
     echo "Error: SIF file not found at ${SIF}" >&2
     exit 1
 fi
 
-REPO="${HOST_PATH}/autoresearch"
-
 if [ ! -d "$REPO" ]; then
     echo "Error: repo not found at ${REPO}" >&2
     exit 1
 fi
 
+mkdir -p "${CACHE_DATA}"
+
 singularity exec --nv \
     --env SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
-    --bind "${REPO}:/opt/autoresearch" \
+    --env CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    --env REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    --env CACHE_DIR="${CACHE_DATA}" \
+    --bind "${REPO}:/workspace" \
     "$SIF" \
-    bash -c "cd /opt/autoresearch && $*"
+    bash -c "cd /workspace && $*"

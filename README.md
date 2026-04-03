@@ -2,9 +2,9 @@
 
 ![teaser](progress.png)
 
-This is a fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) adapted to run on HPC clusters managed by SLURM, using a Singularity container instead of a bare `uv` environment.
+This is a fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) adapted to run on HPC clusters managed by SLURM, using a Singularity container for a reproducible runtime.
 
-The motivation: Flash Attention 3 is difficult to install on HPC systems due to restricted internet access, module conflicts, and the need for specific CUDA toolchain versions. Packaging everything into a Singularity image sidesteps these issues and gives a reproducible, portable runtime across cluster nodes.
+The motivation: Flash Attention 3 is difficult to install on HPC systems due to restricted internet access, module conflicts, and the need for specific CUDA toolchain versions. Packaging everything into a Singularity image sidesteps these issues and provides a portable runtime across cluster nodes.
 
 ## How it works
 
@@ -24,7 +24,7 @@ By design, training runs for a **fixed 5-minute time budget** (wall clock, exclu
 singularity build autoresearch.sif autoresearch.def
 ```
 
-This produces `autoresearch.sif` which bundles CUDA, uv, and all Python dependencies including Flash Attention 3. Place it in the parent directory alongside the repo:
+This produces `autoresearch.sif` which bundles CUDA, Python, and all dependencies including Flash Attention 3. Place it in the parent directory alongside the repo:
 
 ```
 /path/to/workdir/
@@ -36,7 +36,7 @@ This produces `autoresearch.sif` which bundles CUDA, uv, and all Python dependen
 ### 2. Prepare the data (one-time, ~2 min)
 
 ```bash
-./srun.sh uv run prepare.py
+./srun.sh python prepare.py
 ```
 
 Data is cached at `~/.cache/autoresearch/` and bind-mounted into the container automatically.
@@ -44,7 +44,7 @@ Data is cached at `~/.cache/autoresearch/` and bind-mounted into the container a
 ### 3. Test a single training run (~5 min)
 
 ```bash
-./srun.sh uv run train.py
+./srun.sh python train.py
 ```
 
 If this completes and prints a `val_bpb` summary, your setup is working.
@@ -71,10 +71,10 @@ SLURM output and error logs are written to `logs/` under the repo directory.
 
 ```bash
 # Run from the parent directory (contains autoresearch.sif and autoresearch/)
-./srun.sh uv run train.py
+./srun.sh python train.py
 
 # Override the directory containing autoresearch.sif
-./srun.sh /path/to/dir uv run train.py
+./srun.sh /path/to/dir python train.py
 ```
 
 ## Project structure
@@ -86,7 +86,7 @@ program.md       — agent instructions
 train_run.slrm   — SLURM job script (self-resubmitting)
 srun.sh          — Singularity wrapper script
 autoresearch.def — Singularity container definition
-pyproject.toml   — Python dependencies
+pyproject.toml   — Python dependencies (baked into Singularity image)
 logs/            — SLURM stdout/stderr (created automatically)
 ```
 
