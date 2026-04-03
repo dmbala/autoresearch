@@ -4,7 +4,10 @@
 
 This is a fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) adapted to run on HPC clusters managed by SLURM, using a Singularity container for a reproducible runtime.
 
-The motivation: Flash Attention 3 is difficult to install on HPC systems due to restricted internet access, module conflicts, and the need for specific CUDA toolchain versions. Packaging everything into a Singularity image sidesteps these issues and provides a portable runtime across cluster nodes.
+The motivation: Flash Attention 3 is difficult to install on HPC systems when there are conflicts with OS and system libraries such as glibc and CUDA toolchains. In a typical HPC environment, users don't have sudo privileges to make system-level installations. Packaging everything into a Singularity image sidesteps these issues and provides a portable runtime across cluster nodes.
+
+Running a long job like autoresearch requires slight changes to the workflow. Here the job is restarted automatically by SLURM when it finishes.
+
 
 ## How it works
 
@@ -21,8 +24,14 @@ By design, training runs for a **fixed 5-minute time budget** (wall clock, exclu
 ### 1. Build the Singularity image (one-time)
 
 ```bash
+git clone https://github.com/dmbala/autoresearch
+```
+
+```bash
+cd autoresearch
 singularity build autoresearch.sif autoresearch.def
 ```
+
 
 This produces `autoresearch.sif` which bundles CUDA, Python, and all dependencies including Flash Attention 3. Place it in the parent directory alongside the repo:
 
