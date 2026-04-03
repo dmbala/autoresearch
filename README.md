@@ -20,6 +20,8 @@ Only three files matter for the research loop:
 
 Training runs for a **fixed 5-minute time budget** (wall clock, excluding startup/compilation). The `val_bpb` metric is vocab-size-independent, so architectural changes are fairly compared.
 
+Each training run is executed as `./srun.sh python train.py > run.log 2>&1`. The agent parses `val_bpb` and `peak_vram_mb` from `run.log` to decide whether to keep or revert the change. If the grep comes back empty, the run crashed — the agent reads the tail of `run.log` for the stack trace and attempts a fix.
+
 ## Setup
 
 ### 1. Clone and build the Singularity image (one-time)
@@ -74,7 +76,6 @@ SLURM logs are written to `logs/` (created automatically). The working directory
 
 ```bash
 ./srun.sh python train.py
-./srun.sh /path/to/dir python train.py   # override SIF directory
 ```
 
 ## Project structure
@@ -89,6 +90,7 @@ autoresearch.def  — Singularity container definition
 pyproject.toml    — Python dependencies (baked into Singularity image)
 analysis.ipynb    — experiment analysis notebook
 logs/             — SLURM stdout/stderr (created automatically)
+run.log           — stdout/stderr from the latest training run (not tracked in git)
 results.tsv       — experiment results log (not tracked in git)
 ```
 
@@ -96,6 +98,3 @@ results.tsv       — experiment results log (not tracked in git)
 
 This repo tracks [karpathy/autoresearch](https://github.com/karpathy/autoresearch). The HPC-specific additions are `srun.sh`, `autoresearch.def`, and `train_run.slrm`. The core research loop (`prepare.py`, `train.py`, `program.md`) follows upstream conventions.
 
-## License
-
-MIT
