@@ -1,99 +1,100 @@
 # autoresearch — HPC/SLURM fork
 
-![teaser](progress.png)
+A fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) adapted to run on HPC clusters managed by SLURM, using a Singularity container for a reproducible runtime.
 
-This is a fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) adapted to run on HPC clusters managed by SLURM, using a Singularity container instead of a bare `uv` environment.
+## Why a container?
 
-The motivation: Flash Attention 3 is difficult to install on HPC systems due to restricted internet access, module conflicts, and the need for specific CUDA toolchain versions. Packaging everything into a Singularity image sidesteps these issues and gives a reproducible, portable runtime across cluster nodes.
+Flash Attention 3 is difficult to install on HPC systems due to conflicts with OS libraries (glibc, CUDA toolchains), and users typically lack sudo privileges. Packaging everything into a Singularity image sidesteps these issues and provides a portable runtime across cluster nodes.
 
 ## How it works
 
-The repo is deliberately kept small and only really has three files that matter:
+An AI agent reads `program.md` for instructions, then iteratively modifies `train.py`, runs 5-minute training experiments, evaluates `val_bpb` (validation bits per byte — lower is better), and keeps or discards changes based on results. This repeats indefinitely.
 
-- **`prepare.py`** — fixed constants, one-time data prep (downloads training data, trains a BPE tokenizer), and runtime utilities (dataloader, evaluation). Not modified.
-- **`train.py`** — the single file the agent edits. Contains the full GPT model, optimizer (Muon + AdamW), and training loop. Everything is fair game: architecture, hyperparameters, optimizer, batch size, etc. **This file is edited and iterated on by the agent**.
-- **`program.md`** — baseline instructions for one agent. Point your agent here and let it go. **This file is edited and iterated on by the human**.
+Only three files matter for the research loop:
 
-By design, training runs for a **fixed 5-minute time budget** (wall clock, excluding startup/compilation), regardless of the details of your compute. The metric is **val_bpb** (validation bits per byte) — lower is better, and vocab-size-independent so architectural changes are fairly compared.
+| File | Role |
+|------|------|
+| `prepare.py` | Data prep, dataloader, evaluation. **Do not modify.** |
+| `train.py` | Model, optimizer, training loop. **Agent modifies this.** |
+| `program.md` | Instructions and constraints for the agent. **Human edits this.** |
+
+Training runs for a **fixed 5-minute time budget** (wall clock, excluding startup/compilation). The `val_bpb` metric is vocab-size-independent, so architectural changes are fairly compared.
+
+Each training run is executed as `./run.sh python train.py > run.log 2>&1`. The agent parses `val_bpb` and `peak_vram_mb` from `run.log` to decide whether to keep or revert the change. If the grep comes back empty, the run crashed — the agent reads the tail of `run.log` for the stack trace and attempts a fix.
 
 ## Setup
 
-### 1. Build the Singularity image (one-time)
+### 1. Clone and build the Singularity image (one-time)
 
 ```bash
+git clone https://github.com/dmbala/autoresearch
+cd autoresearch
 singularity build autoresearch.sif autoresearch.def
 ```
 
-This produces `autoresearch.sif` which bundles CUDA, uv, and all Python dependencies including Flash Attention 3. Place it in the parent directory alongside the repo:
+This produces `autoresearch.sif` which bundles CUDA, Python, and all dependencies including Flash Attention 3.
 
-```
-/path/to/workdir/
-  autoresearch.sif
-  autoresearch/        ← this repo
-  srun.sh
-```
+The SIF path is hardcoded in `run.sh` — update it if you place the image elsewhere.
 
 ### 2. Prepare the data (one-time, ~2 min)
 
 ```bash
-./srun.sh uv run prepare.py
+./run.sh python prepare.py
 ```
 
-Data is cached at `~/.cache/autoresearch/` and bind-mounted into the container automatically.
+Data is cached at the `CACHE_DATA` path defined in `run.sh` and bind-mounted into the container automatically.
 
 ### 3. Test a single training run (~5 min)
 
 ```bash
-./srun.sh uv run train.py
+./run.sh python train.py
 ```
 
 If this completes and prints a `val_bpb` summary, your setup is working.
 
 ## Running the agent on SLURM
 
-The `train_run.slrm` script submits a Claude agent as a SLURM job. The agent reads `program.md`, then runs the experiment loop autonomously — modifying `train.py`, training for 5 minutes, evaluating, keeping or discarding, and repeating indefinitely.
+`train_run.slrm` submits a Claude agent as a SLURM job. The agent reads `program.md`, then runs the experiment loop autonomously — modifying `train.py`, training, evaluating, and repeating indefinitely.
 
 ```bash
 sbatch train_run.slrm
 ```
 
-The script **self-resubmits** on completion (`sbatch "$0"` at the end), so the agent keeps running across job time limits without manual intervention. To stop it:
+The script **self-resubmits** on completion (`sbatch "$0"`), so the agent keeps running across job time limits without manual intervention. To stop it:
 
 ```bash
 scancel <jobid>
 ```
 
-SLURM output and error logs are written to `logs/` under the repo directory.
+**Note:** To fully stop the loop, rename or remove `train_run.slrm` so the self-resubmit cannot re-launch.
+
+SLURM logs are written to `logs/` (created automatically). The working directory is hardcoded in `train_run.slrm` — update it if you move the repo.
 
 ## Running the container manually
 
-`srun.sh` is the thin wrapper around `singularity exec --nv`:
+`run.sh` is a thin wrapper around `singularity exec --nv`:
 
 ```bash
-# Run from the parent directory (contains autoresearch.sif and autoresearch/)
-./srun.sh uv run train.py
-
-# Override the directory containing autoresearch.sif
-./srun.sh /path/to/dir uv run train.py
+./run.sh python train.py
 ```
 
 ## Project structure
 
 ```
-prepare.py       — constants, data prep + runtime utilities (do not modify)
-train.py         — model, optimizer, training loop (agent modifies this)
-program.md       — agent instructions
-train_run.slrm   — SLURM job script (self-resubmitting)
-srun.sh          — Singularity wrapper script
-autoresearch.def — Singularity container definition
-pyproject.toml   — Python dependencies
-logs/            — SLURM stdout/stderr (created automatically)
+prepare.py        — constants, data prep, runtime utilities (do not modify)
+train.py          — model, optimizer, training loop (agent modifies this)
+program.md        — agent instructions (human edits this)
+train_run.slrm    — SLURM job script (self-resubmitting)
+run.sh           — Singularity wrapper script
+autoresearch.def  — Singularity container definition
+pyproject.toml    — Python dependencies (baked into Singularity image)
+analysis.ipynb    — experiment analysis notebook
+logs/             — SLURM stdout/stderr (created automatically)
+run.log           — stdout/stderr from the latest training run (not tracked in git)
+results.tsv       — experiment results log (not tracked in git)
 ```
 
 ## Upstream
 
-This repo tracks [karpathy/autoresearch](https://github.com/karpathy/autoresearch). The only HPC-specific additions are `srun.sh`, `autoresearch.def`, and `train_run.slrm`. The core research loop (`prepare.py`, `train.py`, `program.md`) follows upstream conventions.
+This repo tracks [karpathy/autoresearch](https://github.com/karpathy/autoresearch). The HPC-specific additions are `run.sh`, `autoresearch.def`, and `train_run.slrm`. The core research loop (`prepare.py`, `train.py`, `program.md`) follows upstream conventions.
 
-## License
-
-MIT
