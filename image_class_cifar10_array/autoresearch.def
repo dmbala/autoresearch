@@ -1,0 +1,62 @@
+Bootstrap: docker
+From: nvidia/cuda:12.1.0-devel-ubuntu22.04
+
+%post
+    # Avoid interactive prompts
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        curl \
+        git \
+        python3 \
+        python3-pip \
+        build-essential \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install uv to a world-accessible location
+    curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=/usr/local/bin sh
+
+    # Create project directory and write our pyproject.toml
+    mkdir -p /opt/autoresearch
+    cat > /opt/autoresearch/pyproject.toml << 'TOML'
+[project]
+name = "autoresearch"
+version = "0.1.0"
+description = "Autonomous vision research with CIFAR-10"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.10.8",
+    "numpy>=2.2.6",
+    "pandas>=2.3.3",
+    "torch==2.9.1",
+    "torchvision>=0.20.0",
+    "tqdm>=4.66.0",
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu128" },
+]
+torchvision = [
+    { index = "pytorch-cu128" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+TOML
+
+    # Install Python dependencies into the container's venv
+    cd /opt/autoresearch
+    uv sync
+
+%environment
+    export PATH="/usr/local/bin:$PATH"
+    export VIRTUAL_ENV=/opt/autoresearch/.venv
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+
+%runscript
+    cd /opt/autoresearch
+    exec "$@"
