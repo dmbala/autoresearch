@@ -1,0 +1,35 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=128GB
+#SBATCH --gres=gpu:1
+#SBATCH --partition=kempner_eng
+#SBATCH --account=kempner_dev
+#SBATCH --time=00:15:00
+#SBATCH --job-name=nanochat-sweep
+#SBATCH --output=logs/sweep_%A_%a.out
+#SBATCH --error=logs/sweep_%A_%a.err
+
+# This script is submitted by the agent as an array job.
+# Each task reads its config from a JSON file using SLURM_ARRAY_TASK_ID.
+#
+# Usage (submitted by the agent, not run directly):
+#   sbatch --array=0-N train_array.slrm <config_file>
+#
+# Arguments:
+#   $1 — path to JSON config file (array of dicts, one per task)
+
+CONFIG_FILE="${1:?Usage: sbatch --array=0-N train_array.slrm <config_file>}"
+TASK_ID="${SLURM_ARRAY_TASK_ID}"
+WORKDIR="$(dirname "$(realpath "$0")")"
+
+cd "${WORKDIR}"
+mkdir -p logs results
+
+OUTPUT_FILE="results/task_${SLURM_ARRAY_JOB_ID}_${TASK_ID}.json"
+
+./run.sh python train.py \
+    --config "${CONFIG_FILE}" \
+    --task-id "${TASK_ID}" \
+    --output "${OUTPUT_FILE}"
