@@ -6,7 +6,6 @@
 # Examples:
 #   ./run.sh python prepare.py
 #   ./run.sh python run.py
-#   ./run.sh uv run prepare.py
 
 SIF="/n/netscratch/kempner_dev/Lab/bdesinghu/images/autoresearch-rl.sif"
 REPO="${PWD}"
@@ -38,7 +37,6 @@ singularity exec --nv \
     --env REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     --env CACHE_DIR="${CACHE_DATA}" \
     --env HF_HOME="${HF_CACHE}" \
-    --env UV_NO_SYNC=true \
     --bind "${REPO}:/workspace" \
     --bind "${HF_CACHE}:${HF_CACHE}" \
     "$SIF" \

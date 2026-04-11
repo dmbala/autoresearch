@@ -13,7 +13,7 @@ To set up a new experiment, work with the user to:
    - `prepare.py` — fixed constants, GPU setup, environment config. Do not modify.
    - `run.py` — experiment runner, launches prime-rl, extracts metrics. Do not modify.
    - `train.toml` — the file you modify. RL training configuration.
-4. **Verify setup**: Check that `./run.sh uv run prepare.py` completes successfully (GPUs detected, model downloaded, prime-rl installed).
+4. **Verify setup**: Check that `./run.sh python prepare.py` completes successfully (GPUs detected, model downloaded, prime-rl installed).
 5. **Initialize results.tsv**: Create `results.tsv` with just the header row. The baseline will be recorded after the first run.
 6. **Confirm and go**: Confirm setup looks good.
 
@@ -21,7 +21,7 @@ Once you get confirmation, kick off the experimentation.
 
 ## Experimentation
 
-Each experiment uses 2 GPUs: GPU 0 for inference (vLLM), GPU 1 for training. The experiment runner handles everything: `./run.sh uv run run.py`.
+Each experiment uses 2 GPUs: GPU 0 for inference (vLLM), GPU 1 for training. The experiment runner handles everything: `./run.sh python run.py`.
 
 **What you CAN do:**
 - Modify `train.toml` — this is the only file you edit. Everything is fair game: learning rate, optimizer, loss function, batch size, rollouts, temperature, environments, LoRA config, scheduler, etc.
@@ -137,7 +137,7 @@ LOOP FOREVER:
 1. Look at the git state: the current branch/commit we're on
 2. Tune `train.toml` with an experimental idea.
 3. git commit
-4. Run the experiment: `./run.sh uv run run.py > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
+4. Run the experiment: `./run.sh python run.py > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
 5. Read out the results: `grep "^eval_score:\|^peak_vram_mb:" run.log`
 6. If the grep output is empty or shows `status: crash`, the run crashed. Run `tail -n 50 run.log` to read the error and attempt a fix. If you can't get things to work after more than a few attempts, give up.
 7. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)

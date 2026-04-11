@@ -21,7 +21,7 @@ Only four files matter for the research loop:
 
 Training runs for a **fixed 10-minute time budget** (wall clock, excluding startup/eval overhead). Each experiment uses 2 GPUs: GPU 0 for vLLM inference, GPU 1 for the RL trainer.
 
-Each training run is executed as `./run.sh uv run run.py > run.log 2>&1`. The agent parses `eval_score` and `peak_vram_mb` from `run.log` to decide whether to keep or revert the change. If the grep comes back empty, the run crashed — the agent reads the tail of `run.log` for the stack trace and attempts a fix.
+Each training run is executed as `./run.sh python run.py > run.log 2>&1`. The agent parses `eval_score` and `peak_vram_mb` from `run.log` to decide whether to keep or revert the change. If the grep comes back empty, the run crashed — the agent reads the tail of `run.log` for the stack trace and attempts a fix.
 
 ## Setup
 
@@ -40,7 +40,7 @@ The SIF path is hardcoded in `run.sh` — update it if you place the image elsew
 ### 2. Prepare the environment (one-time, ~2 min)
 
 ```bash
-./run.sh uv run prepare.py
+./run.sh python prepare.py
 ```
 
 This downloads the base model (`Qwen/Qwen2.5-0.5B-Instruct`), verifies GPU availability, and checks that prime-rl and verifiers are installed.
@@ -48,7 +48,7 @@ This downloads the base model (`Qwen/Qwen2.5-0.5B-Instruct`), verifies GPU avail
 ### 3. Test a single training run (~12 min)
 
 ```bash
-./run.sh uv run run.py
+./run.sh python run.py
 ```
 
 If this completes and prints an `eval_score` summary, your setup is working.
@@ -76,7 +76,7 @@ SLURM logs are written to `logs/` (created automatically). The working directory
 `run.sh` is a thin wrapper around `singularity exec --nv`:
 
 ```bash
-./run.sh uv run run.py
+./run.sh python run.py
 ```
 
 ## Project structure
