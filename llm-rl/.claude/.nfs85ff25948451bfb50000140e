@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x:*)",
+      "Bash(./run.sh ls:*)",
+      "Bash(singularity exec:*)",
+      "WebSearch",
+      "Bash(singularity build:*)",
+      "Bash(./run.sh python:*)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(kill 1200742)",
+      "Bash(nvidia-smi --query-compute-apps=pid --format=csv)"
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+Bootstrap: docker
+From: nvidia/cuda:12.8.0-devel-ubuntu22.04
+
+%files
+    pyproject.toml /opt/autoresearch-rl/pyproject.toml
+
+%post
+    # Avoid interactive prompts
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        curl \
+        git \
+        python3 \
+        python3-pip \
+        build-essential \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install uv to a world-accessible location
+    curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=/usr/local/bin sh
+
+    # Set up the project and install all dependencies
+    cd /opt/autoresearch-rl
+    export UV_PYTHON_INSTALL_DIR=/opt/uv-python
+    uv sync --no-install-project --all-extras
+
+    # Install verifiers environments from Prime Hub
+    export PATH="/opt/autoresearch-rl/.venv/bin:$PATH"
+    prime env install primeintellect/gsm8k primeintellect/math --with uv --no-upgrade
+
+%environment
+    export PATH="/usr/local/bin:$PATH"
+    export VIRTUAL_ENV=/opt/autoresearch-rl/.venv
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+    export UV_PROJECT_ENVIRONMENT=/opt/autoresearch-rl/.venv
+    export UV_PYTHON_INSTALL_DIR=/opt/uv-python
+
+%runscript
+    cd /opt/autoresearch-rl
+    exec "$@"
