@@ -1,6 +1,6 @@
 # autoresearch-rl — HPC/SLURM fork
 
-A fork of [autoresearch-rl](https://github.com/dmbala/autoresearch-rl) adapted to run on HPC clusters managed by SLURM, using a Singularity container for a reproducible runtime. Built on [prime-rl](https://github.com/PrimeIntellect-ai/prime-rl) and [verifiers](https://github.com/PrimeIntellect-ai/verifiers) for reward verification.
+A fork of [autoresearch-rl](https://github.com/vivekvkashyap/autoresearch-rl) adapted to run on HPC clusters managed by SLURM, using a Singularity container for a reproducible runtime. Built on [prime-rl](https://github.com/PrimeIntellect-ai/prime-rl) and [verifiers](https://github.com/PrimeIntellect-ai/verifiers) for reward verification.
 
 ## Why a container?
 
